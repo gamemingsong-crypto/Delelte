@@ -3,7 +3,8 @@ import express from 'express';
 import { 
     Client, 
     GatewayIntentBits, 
-    PermissionsBitField 
+    PermissionsBitField,
+    ActivityType
 } from 'discord.js';
 // ==========================================
 // 🌐 สร้าง Web Server เพื่อให้ Cron-job.org วิ่งมาสะกิดได้
@@ -32,6 +33,9 @@ const TARGET_CHANNEL_ID = "1511625751609479220";
 // ✨ แก้ไขจาก clientReady เป็น ready ให้ถูกต้องตามหลัก
 client.once("ready", () => {
     console.log(`🚀 ${client.user.tag} ออนไลน์และพร้อมลบข้อความแล้วครับ!`);
+client.user.setActivity('จัดระเบียบห้อง | ลบแชทอัตโนมัติ', { 
+        type: ActivityType.Watching 
+    });
 });
 
 client.on("messageCreate", async (message) => {

@@ -35,8 +35,8 @@ client.on("messageCreate", async (message) => {
         if (isNaN(amount) || amount < 1 || amount > 100) return message.reply("ระบุจำนวน (1-100)");
 
         await message.channel.bulkDelete(amount + 1, true);
-        const msg = await message.channel.send(`🧹 ลบให้แล้ว ${amount} ข้อความครับ!`);
-        setTimeout(() => msg.delete(), 3000);
+        const msg = await message.reply("ข้อความ");
+        setTimeout(() => msg.delete(), 10000); // 👈 เพิ่มบรรทัดนี้ บอทจะลบตัวเองใน 10 วินาที
         return;
     }
 

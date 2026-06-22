@@ -1,73 +1,57 @@
 import 'dotenv/config';
 import express from 'express';
-import { 
-    Client, 
-    GatewayIntentBits, 
-    PermissionsBitField,
-    ActivityType
-} from 'discord.js';
-// ==========================================
-// 🌐 สร้าง Web Server เพื่อให้ Cron-job.org วิ่งมาสะกิดได้
-// ==========================================
+import { Client, GatewayIntentBits, PermissionsBitField, ActivityType } from 'discord.js';
+
+// 🌐 Web Server สำหรับป้องกันบอทหลับ (Render)
 const app = express();
 app.get('/', (req, res) => res.send('Auto Delete Bot is Alive!'));
-app.listen(process.env.PORT || 3000, () => {
-    console.log('🌐 Web Server สำหรับบอทลบข้อความพร้อมทำงานแล้ว!');
-});
+app.listen(process.env.PORT || 3000);
 
-// ==========================================
-// 🤖 ตั้งค่าบอท DISCORD
-// ==========================================
+// 🤖 ตั้งค่าบอท
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-// 📌 ดึง TOKEN จากไฟล์ .env หรือตั้งค่า Environment บน Host (ปลอดภัยกว่า)
-const TOKEN = process.env.DISCORD_TOKEN; 
-const TARGET_CHANNEL_ID = "1511625751609479220";
+const TOKEN = process.env.DISCORD_TOKEN;
 
-// ✨ แก้ไขจาก clientReady เป็น ready ให้ถูกต้องตามหลัก
+// 📌 ตั้งค่า ID ห้อง และ ID ยศที่ยกเว้น (แก้ตรงนี้ให้เป็นของพี่)
+const TARGET_CHANNELS = ["1517238552545726556", "1518687612691550218"];
+const PROTECTED_ROLES = ["1511072295320293546", "1508699693486575707"];
+
 client.once("ready", () => {
-    console.log(`🚀 ${client.user.tag} ออนไลน์และพร้อมลบข้อความแล้วครับ!`);
-client.user.setActivity('จัดระเบียบห้อง | ลบแชทอัตโนมัติ', { 
-        type: ActivityType.Watching 
-    });
+    console.log(`🚀 ${client.user.tag} พร้อมลุย!`);
+    client.user.setActivity('จัดระเบียบห้อง | !delete', { type: ActivityType.Watching });
 });
 
 client.on("messageCreate", async (message) => {
-    // 1. กันบอทลูปตัวเอง
     if (message.author.bot) return;
 
-    // 2. ถ้าพิมพ์ !delroom ให้ไปทำฟังก์ชันลบห้อง
-    if (message.content.startsWith("!delroom")) {
-        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.reply("พี่ไม่มีสิทธิ์สั่งลบห้องนะครับ!");
-        }
-        if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
-            return message.reply("บอทไม่มีสิทธิ์ Manage Channels ครับพี่!");
-        }
+    // 💣 คำสั่งลบข้อความ (ใช้ !delete จำนวน)
+    if (message.content.startsWith("!delete")) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+        
+        const args = message.content.split(' ');
+        const amount = parseInt(args[1]);
+        if (isNaN(amount) || amount < 1 || amount > 100) return message.reply("ระบุจำนวน (1-100)");
 
-        await message.reply("กำลังทำลายห้องนี้ใน 3 วินาที... 💣");
-        setTimeout(async () => {
-            try { await message.channel.delete(); } 
-            catch (err) { console.error("ลบห้องไม่ได้:", err); }
-        }, 3000);
-        return; // จบการทำงานตรงนี้ ไม่ต้องไปเช็คการลบแชทต่อ
+        await message.channel.bulkDelete(amount + 1, true);
+        const msg = await message.channel.send(`🧹 ลบให้แล้ว ${amount} ข้อความครับ!`);
+        setTimeout(() => msg.delete(), 3000);
+        return;
     }
 
-    // 3. ถ้าไม่ใช่ !delroom ให้มาเช็คการลบแชทอัตโนมัติ (โค้ดเดิมของพี่)
-    if (message.channel.id === TARGET_CHANNEL_ID) {
-        if (message.member?.permissions.has(PermissionsBitField.Flags.Administrator)) return;
-        if (message.attachments.size > 0) return;
+    // 🧹 ลบข้อความออโต้ (เฝ้าหลายห้อง + เช็คยศ)
+    if (TARGET_CHANNELS.includes(message.channel.id)) {
+        const hasProtectedRole = message.member.roles.cache.some(r => PROTECTED_ROLES.includes(r.id));
+        
+        if (message.member.permissions.has(PermissionsBitField.Flags.Administrator) || 
+            hasProtectedRole || 
+            message.attachments.size > 0) return;
 
         setTimeout(async () => {
             try { await message.delete(); } 
             catch (err) { console.error("ลบข้อความไม่ได้:", err); }
-        }, 3000);
+        }, 10000); // 10 วินาที
     }
 });
 

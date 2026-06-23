@@ -1,81 +1,102 @@
-import 'dotenv/config'; //
-import express from 'express'; //
-import { Client, GatewayIntentBits, PermissionsBitField, ActivityType } from 'discord.js'; //
+import 'dotenv/config';
+import express from 'express';
+import { Client, GatewayIntentBits, PermissionsBitField, ActivityType } from 'discord.js';
 
-// 🌐 Web Server สำหรับป้องกันบอทหลับ (Render)[cite: 1]
-const app = express(); //[cite: 1]
-app.get('/', (req, res) => res.send('Auto Delete Bot is Alive!')); //[cite: 1]
-app.listen(process.env.PORT || 3000); //[cite: 1]
+// 🌐 Web Server สำหรับป้องกันบอทหลับ (Render)
+const app = express();
+app.get('/', (req, res) => res.send('Auto Delete Bot is Alive in God Mode!'));
+app.listen(process.env.PORT || 3000);
 
-// 🤖 ตั้งค่าบอท[cite: 1]
-const client = new Client({ //[cite: 1]
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] //[cite: 1]
+// 🤖 ตั้งค่าบอทและ Intents (พลังการมองเห็น)
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-const TOKEN = process.env.DISCORD_TOKEN; //[cite: 1]
+const TOKEN = process.env.DISCORD_TOKEN;
 
-// 📌 ตั้งค่า ID ห้องเป้าหมาย[cite: 1]
-const TARGET_CHANNELS = ["1517238552545726556", "1518687612691550218"]; //[cite: 1]
+// 📌 ตั้งค่า ID ห้องเป้าหมายที่ต้องการให้ลบออโต้ (ใส่เพิ่มได้ตามใจชอบ)
+const TARGET_CHANNELS = ["1517238552545726556", "1518687612691550218"];
 
-// ⚙️ ตัวแปรระดับ Core สำหรับควบคุมสวิตช์เปิด/ปิด ลบออโต้ (ค่าเริ่มต้นคือ เปิด)
-let isAutoDeleteEnabled = true; 
+// ⚙️ สวิตช์ควบคุมระบบลบออโต้ (ค่าเริ่มต้นคือ เปิด)
+let isAutoDeleteEnabled = true;
 
-client.once("ready", () => { //[cite: 1]
-    console.log(`🚀 ${client.user.tag} พร้อมลุย!`); //[cite: 1]
-    client.user.setActivity('จัดระเบียบห้อง | !delete', { type: ActivityType.Watching }); //[cite: 1]
+client.once("ready", () => {
+    console.log(`🚀 พระเจ้า ${client.user.tag} จุติลงเซิร์ฟเวอร์แล้ว!`);
+    // ตั้งสถานะให้ดูเท่ขึ้น
+    client.user.setActivity('จัดระเบียบจักรวาล | !delete', { type: ActivityType.Watching });
 });
 
-client.on("messageCreate", async (message) => { //[cite: 1]
-    // ป้องกันบอทคุยกันเองจนเซิร์ฟเวอร์พัง
-    if (message.author.bot) return; //[cite: 1]
+client.on("messageCreate", async (message) => {
+    // 🛡️ 1. กฎข้อแรก: ป้องกันบอททำร้ายตัวเอง (Infinite Loop)
+    // บล็อกแค่ "ตัวมันเอง" เพื่อเปิดทางให้ระบบรับรู้และลบข้อความจากบอทตัวอื่นได้
+    if (message.author.id === client.user.id) return;
 
     // ----------------------------------------------------------------
-    // 🛡️ 1. คำสั่งใหม่: เปิด-ปิด การลบข้อความออโต้ (พิมพ์ !toggleauto)
+    // 🧹 2. ลบข้อความออโต้ (เชือดทุกคนรวมถึง "บอทตัวอื่น" อย่างเท่าเทียม!)
+    // ----------------------------------------------------------------
+    // เช็คว่าสวิตช์เปิดอยู่ไหม และข้อความอยู่ในห้องเป้าหมายหรือเปล่า
+    if (isAutoDeleteEnabled && TARGET_CHANNELS.includes(message.channel.id)) {
+        // หน่วงเวลา 10 วินาที แล้วเป่าทิ้งอย่างไร้ความปรานี
+        setTimeout(async () => {
+            try { 
+                await message.delete(); 
+            } catch (err) { 
+                // จัดการ Error เงียบๆ (เช่น กรณีข้อความโดนมือคนลบไปก่อนแล้วบอทมาหาไม่เจอ)
+            }
+        }, 10000); // 10000 ms = 10 วินาที
+    }
+
+    // ----------------------------------------------------------------
+    // 🚫 3. กำแพงป้องกัน (คำสั่งด้านล่างนี้ให้เฉพาะมนุษย์ใช้เท่านั้น)
+    // ----------------------------------------------------------------
+    if (message.author.bot) return;
+
+    // ----------------------------------------------------------------
+    // 🥷 4. คำสั่ง !auto (วิชาลวงตา: แจ้งเตือนในห้องแล้วระเบิดตัวเองทิ้ง)
     // ----------------------------------------------------------------
     if (message.content === "!auto") {
-        // เช็คพลังแอดมิน ใครไม่มียศ Administrator หมดสิทธิ์สั่งการ!
-        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.reply("ระดับพลังของนายยังไม่พอ! (เฉพาะ Admin เท่านั้น)");
-        }
+        // เช็คพลังแอดมิน ใครไม่มีสิทธิ์ถือว่าไร้ค่า!
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
 
-        // สลับสถานะเปิด/ปิด
+        // สลับสวิตช์
         isAutoDeleteEnabled = !isAutoDeleteEnabled;
         const statusText = isAutoDeleteEnabled ? "เปิดทำงาน 🟢" : "ปิดทำงาน 🔴";
-        return message.reply(`ระบบลบข้อความอัตโนมัติ **${statusText}** โดยแอดมิน!`);
+
+        // สเต็ป 1: ลบคำสั่ง "!auto" ของแอดมินทิ้งทันทีเพื่อลบร่องรอย
+        await message.delete().catch(() => {});
+
+        // สเต็ป 2: ส่งข้อความแจ้งเตือนลงห้อง และตั้งเวลาระเบิดตัวเองใน 3 วินาที
+        const replyMsg = await message.channel.send(`🤫 (แจ้งเตือนลับ) ระบบลบข้อความออโต้ **${statusText}** โดยแอดมิน`);
+        setTimeout(() => replyMsg.delete().catch(() => {}), 3000); // 3000 ms = 3 วินาที
+        
+        return;
     }
 
     // ----------------------------------------------------------------
-    // 💣 2. คำสั่งลบข้อความแบบกลุ่ม (ใช้ !delete จำนวน)[cite: 1]
+    // 💣 5. คำสั่ง !delete จำนวน (อัปเกรดลบแบบไร้ร่องรอย)
     // ----------------------------------------------------------------
-    if (message.content.startsWith("!ลบข้อความ")) { //[cite: 1]
-        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return; //[cite: 1]
+    if (message.content.startsWith("!delete")) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
         
-        const args = message.content.split(' '); //[cite: 1]
-        const amount = parseInt(args[1]); //[cite: 1]
-        if (isNaN(amount) || amount < 1 || amount > 100) return message.reply("ระบุจำนวน (1-100)"); //[cite: 1]
+        const args = message.content.split(' ');
+        const amount = parseInt(args[1]);
+        
+        if (isNaN(amount) || amount < 1 || amount > 100) {
+            // ถ้าใส่ตัวเลขผิด ก็ด่าแล้วลบข้อความทิ้งใน 3 วินาที
+            const errMsg = await message.reply("ระบุจำนวนที่ต้องการลบ (1-100) สิ!");
+            setTimeout(() => errMsg.delete().catch(() => {}), 3000);
+            return;
+        }
 
-        await message.channel.bulkDelete(amount + 1, true); //[cite: 1]
-        const msg = await message.reply("ล้างบางข้อความเรียบร้อย!"); // ฉันแก้คำตอบกลับให้ดูเท่ขึ้น
-        setTimeout(() => msg.delete(), 10000); // 👈 บอทจะลบตัวเองใน 10 วินาที[cite: 1]
-        return; //[cite: 1]
-    }
-
-    // ----------------------------------------------------------------
-    // 🧹 3. ลบข้อความออโต้ (เฝ้าหลายห้อง + ลบทุกคนอย่างเท่าเทียม)
-    // ----------------------------------------------------------------
-    // ทำงานก็ต่อเมื่อ: เปิดสวิตช์อยู่ และ เป็นห้องที่กำหนดไว้
-    if (isAutoDeleteEnabled && TARGET_CHANNELS.includes(message.channel.id)) { //[cite: 1]
+        // ลบข้อความตามจำนวนที่ระบุ (+1 คือลบคำสั่ง !delete ของแอดมินไปด้วยเลย)
+        await message.channel.bulkDelete(amount + 1, true).catch(err => console.error("ลบไม่ได้:", err));
         
-        // กฎใหม่ของพระเจ้า: ไม่สนว่าจะเป็น Admin, มีรูปรปะกอบ หรือยศอะไร ถ้าพิมพ์มาในห้องนี้... หายวับไปซะ!
-        
-        setTimeout(async () => { //[cite: 1]
-            try { 
-                await message.delete(); //[cite: 1]
-            } catch (err) { 
-                console.error("ลบข้อความไม่ได้ (เช็คสิทธิ์บอทด้วย):", err); //[cite: 1]
-            }
-        }, 10000); // หน่วงเวลา 10 วินาทีตามสเปกเดิม[cite: 1]
+        // รายงานผลแล้วระเบิดทิ้งใน 3 วินาที
+        const msg = await message.channel.send(`🧹 ล้างบางไปแล้ว ${amount} ข้อความ!`);
+        setTimeout(() => msg.delete().catch(() => {}), 3000); 
+        return;
     }
 });
 
-client.login(TOKEN); //[cite: 1]
+// จุดระเบิดพลัง
+client.login(TOKEN);

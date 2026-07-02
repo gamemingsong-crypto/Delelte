@@ -14,8 +14,25 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
-// 📌 ตั้งค่า ID ห้องเป้าหมายที่ต้องการให้ลบออโต้ (ใส่เพิ่มได้ตามใจชอบ)
-const TARGET_CHANNELS = ["1517238552545726556", "1518687612691550218"];
+// 📌 ตั้งค่า ID ห้องเป้าหมาย + โหมดการลบของแต่ละห้อง (เพิ่ม/แก้ห้องได้ตามใจชอบ)
+// โหมดที่เลือกได้:
+//   "text_only"  -> ลบเฉพาะข้อความ  (มีรูปแนบมา ไม่ลบ)
+//   "image_only" -> ลบเฉพาะรูปภาพ   (ข้อความล้วนๆ ไม่ลบ)
+//   "all"        -> ลบทุกอย่าง (ทั้งข้อความและรูป)
+const CHANNEL_CONFIG = {
+    "1511625751609479220": "text_only",
+    "1518687612691550218": "all",
+    "1517238552545726556": "all",
+  //"1518687612691550218": "image_only",
+};
+
+// ฟังก์ชันเช็คว่าข้อความนี้มีรูปภาพแนบมาไหม
+function hasImageAttachment(message) {
+    return message.attachments.some(att =>
+        att.contentType?.startsWith('image/') ||
+        /\.(png|jpe?g|gif|webp|bmp)$/i.test(att.name || '')
+    );
+}
 
 // ⚙️ สวิตช์ควบคุมระบบลบออโต้ (ค่าเริ่มต้นคือ เปิด)
 let isAutoDeleteEnabled = true;
@@ -35,15 +52,30 @@ client.on("messageCreate", async (message) => {
     // 🧹 2. ลบข้อความออโต้ (เชือดทุกคนรวมถึง "บอทตัวอื่น" อย่างเท่าเทียม!)
     // ----------------------------------------------------------------
     // เช็คว่าสวิตช์เปิดอยู่ไหม และข้อความอยู่ในห้องเป้าหมายหรือเปล่า
-    if (isAutoDeleteEnabled && TARGET_CHANNELS.includes(message.channel.id)) {
-        // หน่วงเวลา 10 วินาที แล้วเป่าทิ้งอย่างไร้ความปรานี
-        setTimeout(async () => {
-            try { 
-                await message.delete(); 
-            } catch (err) { 
-                // จัดการ Error เงียบๆ (เช่น กรณีข้อความโดนมือคนลบไปก่อนแล้วบอทมาหาไม่เจอ)
-            }
-        }, 10000); // 10000 ms = 10 วินาที
+    const channelMode = CHANNEL_CONFIG[message.channel.id];
+    if (isAutoDeleteEnabled && channelMode) {
+        const hasImage = hasImageAttachment(message);
+
+        // ตัดสินใจว่าควรลบไหม ตามโหมดของห้องนั้นๆ
+        let shouldDelete = false;
+        if (channelMode === "all") {
+            shouldDelete = true; // ลบทุกอย่าง
+        } else if (channelMode === "text_only") {
+            shouldDelete = !hasImage; // ลบเฉพาะข้อความ (ไม่มีรูป)
+        } else if (channelMode === "image_only") {
+            shouldDelete = hasImage; // ลบเฉพาะที่มีรูป
+        }
+
+        if (shouldDelete) {
+            // หน่วงเวลา 10 วินาที แล้วเป่าทิ้งอย่างไร้ความปรานี
+            setTimeout(async () => {
+                try { 
+                    await message.delete(); 
+                } catch (err) { 
+                    // จัดการ Error เงียบๆ (เช่น กรณีข้อความโดนมือคนลบไปก่อนแล้วบอทมาหาไม่เจอ)
+                }
+            }, 10000); // 10000 ms = 10 วินาที
+        }
     }
 
     // ----------------------------------------------------------------

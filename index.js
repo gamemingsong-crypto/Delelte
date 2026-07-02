@@ -26,6 +26,14 @@ const CHANNEL_CONFIG = {
   //"1518687612691550218": "image_only",
 };
 
+// 🛡️ รายชื่อ User ID ของบอท/ผู้ใช้ที่ "ยกเว้น" ไม่ให้โดนลบข้อความ
+// เช่น บอทแจ้งยอดสนับสนุน, บอทระบบอื่นๆ ที่ต้องการเก็บข้อความไว้
+// วิธีหา ID: เปิด Developer Mode ใน Discord (Settings > Advanced > Developer Mode)
+// แล้วคลิกขวาที่ชื่อบอท > Copy User ID
+const EXEMPT_USER_IDS = [
+    "1517825184696897668",
+];
+
 // ฟังก์ชันเช็คว่าข้อความนี้มีรูปภาพแนบมาไหม
 function hasImageAttachment(message) {
     return message.attachments.some(att =>
@@ -50,10 +58,13 @@ client.on("messageCreate", async (message) => {
 
     // ----------------------------------------------------------------
     // 🧹 2. ลบข้อความออโต้ (เชือดทุกคนรวมถึง "บอทตัวอื่น" อย่างเท่าเทียม!)
+    //    ยกเว้นผู้ใช้/บอทที่อยู่ใน EXEMPT_USER_IDS
     // ----------------------------------------------------------------
+    const isExempt = EXEMPT_USER_IDS.includes(message.author.id);
+
     // เช็คว่าสวิตช์เปิดอยู่ไหม และข้อความอยู่ในห้องเป้าหมายหรือเปล่า
     const channelMode = CHANNEL_CONFIG[message.channel.id];
-    if (isAutoDeleteEnabled && channelMode) {
+    if (isAutoDeleteEnabled && channelMode && !isExempt) {
         const hasImage = hasImageAttachment(message);
 
         // ตัดสินใจว่าควรลบไหม ตามโหมดของห้องนั้นๆ

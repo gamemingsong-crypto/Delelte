@@ -13,6 +13,11 @@ const client = new Client({
 });
 
 const TOKEN = process.env.DISCORD_TOKEN;
+const PRESENCE_REFRESH_MS = 5 * 60 * 1000;
+
+function applyPresence() {
+    client.user?.setActivity('จัดระเบียบจักรวาล | !delete', { type: ActivityType.Watching });
+}
 
 // 📌 ตั้งค่า ID ห้องเป้าหมาย + โหมดการลบของแต่ละห้อง (เพิ่ม/แก้ห้องได้ตามใจชอบ)
 // โหมดที่เลือกได้:
@@ -48,9 +53,11 @@ let isAutoDeleteEnabled = true;
 
 client.once("ready", () => {
     console.log(`🚀 พระเจ้า ${client.user.tag} จุติลงเซิร์ฟเวอร์แล้ว!`);
-    // ตั้งสถานะให้ดูเท่ขึ้น
-    client.user.setActivity('จัดระเบียบจักรวาล | !delete', { type: ActivityType.Watching });
+    applyPresence();
+    setInterval(applyPresence, PRESENCE_REFRESH_MS);
 });
+
+client.on("shardResume", applyPresence);
 
 client.on("messageCreate", async (message) => {
     // 🛡️ 1. กฎข้อแรก: ป้องกันบอททำร้ายตัวเอง (Infinite Loop)
